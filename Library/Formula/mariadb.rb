@@ -1,36 +1,35 @@
 require 'formula'
 
 class Mariadb < Formula
-  # You probably don't want to have this and MySQL's formula linked at the same time
-  # Just saying.
-  url 'http://ftp.osuosl.org/pub/mariadb/mariadb-5.2.10/kvm-tarbake-jaunty-x86/mariadb-5.2.10.tar.gz'
   homepage 'http://mariadb.org/'
-  md5 'c47fa6448476b06bb15788d3f23e2ae8'
+  url 'http://ftp.osuosl.org/pub/mariadb/mariadb-5.3.8/kvm-tarbake-jaunty-x86/mariadb-5.3.8.tar.gz'
+  sha1 '1a6cc5e1c0aedf6aae61cd55f8d75fce11fa3115'
 
   depends_on 'readline'
 
-  def patches
-    # upstream patches to fix compilation failures on OS X
-    # will be present in next release
-    { :p0 => ['http://bazaar.launchpad.net/~maria-captains/maria/5.2/diff/3085',
-              'http://bazaar.launchpad.net/~maria-captains/maria/5.2/diff/3075.1.1',
-              'http://bazaar.launchpad.net/~maria-captains/maria/5.2/diff/3094'] }
-  end
+  option :universal
+  option 'with-tests', 'Keep test when installing'
+  option 'with-bench', 'Keep benchmark app when installing'
+  option 'client-only', 'Install only client tools'
 
-  def options
-    [
-      ['--with-tests', "Keep tests when installing."],
-      ['--with-bench', "Keep benchmark app when installing."],
-      ['--client-only', "Only install client tools, not the server."],
-      ['--universal', "Make mariadb a universal binary"]
-    ]
+  conflicts_with 'mysql',
+    :because => "mariadb and mysql install the same binaries."
+  conflicts_with 'percona-server',
+    :because => "mariadb and percona-server install the same binaries."
+
+  fails_with :clang do
+    build 421
   end
 
   def install
+    # Build without compiler or CPU specific optimization flags to facilitate
+    # compilation of gems and other software that queries `mysql-config`.
+    ENV.minimal_optimization
+
     ENV.append 'CXXFLAGS', '-fno-omit-frame-pointer -felide-constructors'
 
     # Make universal for bindings to universal applications
-    ENV.universal_binary if ARGV.build_universal?
+    ENV.universal_binary if build.universal?
 
     configure_args = [
       "--without-docs",
@@ -40,7 +39,6 @@ class Mariadb < Formula
       "--localstatedir=#{var}/mysql",
       "--sysconfdir=#{etc}",
       "--with-extra-charsets=complex",
-      "--without-readline",
       "--enable-assembler",
       "--enable-thread-safe-client",
       "--with-big-tables",
@@ -52,9 +50,10 @@ class Mariadb < Formula
       "--with-plugins=max-no-ndb",
       "--with-embedded-server",
       "--with-libevent",
+      "--with-readline",
     ]
 
-    configure_args << "--without-server" if ARGV.include? '--client-only'
+    configure_args << "--without-server" if build.include? 'client-only'
 
     system "./configure", *configure_args
     system "make install"
@@ -62,11 +61,8 @@ class Mariadb < Formula
     bin.install_symlink "#{libexec}/mysqld"
     bin.install_symlink "#{share}/mysql/mysql.server"
 
-    (prefix+'mysql-test').rmtree unless ARGV.include? '--with-tests' # save 121MB!
-    (prefix+'sql-bench').rmtree unless ARGV.include? '--with-bench'
-
-    plist_path.write startup_plist
-    plist_path.chmod 0644
+    (prefix+'mysql-test').rmtree unless build.include? 'with-tests' # save 121MB!
+    (prefix+'sql-bench').rmtree unless build.include? 'with-bench'
   end
 
   def caveats; <<-EOS.undent

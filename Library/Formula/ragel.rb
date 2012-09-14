@@ -8,9 +8,16 @@ end
 class Ragel < Formula
   homepage 'http://www.complang.org/ragel/'
   url 'http://www.complang.org/ragel/ragel-6.7.tar.gz'
-  md5 'f4423e0d8a6538dd4e61498fcfad3cec'
+  sha1 'bf12b634f5a25e5ba305edfee59a455069ed3b0a'
 
   def install
+    if ENV.compiler == :clang
+      # fix build with clang
+      inreplace ["aapl/avlcommon.h", "aapl/bstcommon.h", "aapl/bubblesort.h", "aapl/mergesort.h"], /([^:.])(compare)/, '\1this->\2'
+      # fix build with libc++
+      inreplace 'ragel/javacodegen.cpp', /setiosflags/, 'std::\&'
+    end
+
     system "./configure", "--disable-dependency-tracking", "--prefix=#{prefix}"
     system "make install"
 

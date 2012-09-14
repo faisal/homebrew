@@ -3,17 +3,16 @@ require 'formula'
 class Kite < Formula
   homepage 'http://www.kite-language.org/'
   url 'http://www.kite-language.org/files/kite-1.0.4.tar.gz'
-  md5 '46b4a99d72984e8e9d330517faddd9d5'
+  sha1 '9db2adbcc3acac5f06d495002a344e613c81c3f2'
 
   depends_on 'bdw-gc'
 
-  def patches
-    # patch to build against bdw-gc 7.2, sent upstream
-    DATA
-  end
+  # patch to build against bdw-gc 7.2, sent upstream
+  def patches; DATA; end
 
   def install
-    system "./configure", "--disable-debug", "--disable-dependency-tracking", "--prefix=#{prefix}"
+    system "./configure", "--disable-debug", "--disable-dependency-tracking",
+                          "--prefix=#{prefix}"
     system "make install"
   end
 end
